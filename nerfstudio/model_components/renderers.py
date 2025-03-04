@@ -93,7 +93,6 @@ class RGBRenderer(nn.Module):
         """
         if ray_indices is not None and num_rays is not None:
             # Necessary for packed samples from volumetric ray sampler
-            CONSOLE.print(f"background_color: {background_color}")
             if background_color == "last_sample":
                 raise NotImplementedError("Background color 'last_sample' not implemented for packed samples.")
             comp_rgb = nerfacc.accumulate_along_rays(
@@ -356,7 +355,6 @@ class DepthRenderer(nn.Module):
             #CONSOLE.print("median")
             threshold = 5
             steps = (ray_samples.frustums.starts + ray_samples.frustums.ends) / 2
-            #CONSOLE.print(f"steps shape: {steps.shape}")
 
             if ray_indices is not None and num_rays is not None:
                 raise NotImplementedError("Median depth calculation is not implemented for packed samples.")
@@ -364,34 +362,22 @@ class DepthRenderer(nn.Module):
             v_02 = torch.ones((*weights.shape[:-2], 1), device=weights.device) * 0.2  # [..., 1]
             index_02 = torch.searchsorted(cumulative_weights, v_02, side="left")  # [..., 1]
             index_02 = torch.clamp(index_02, 0, steps.shape[-2] - 1)  # [..., 1]
-            #median_depth = torch.gather(steps[..., 0], dim=-1, index=index_02)  # [..., 1]
-            #CONSOLE.print(f"index_02: {index_02}")
-            #CONSOLE.print(f"index_02.shape: {index_02.shape}")
+
 
 
             v_05 = torch.ones((*weights.shape[:-2], 1), device=weights.device) * 0.5  # [..., 1]
             index_05 = torch.searchsorted(cumulative_weights, v_05, side="left")  # [..., 1]
             index_05 = torch.clamp(index_05, 0, steps.shape[-2] - 1)  # [..., 1]
-            #CONSOLE.print(f"index_05.shape: {index_05.shape}")
 
             width_index = index_05 - index_02
 
             mask = (width_index <= threshold).squeeze(1)
-            #CONSOLE.print(f"mask shape: {mask.shape}")
             true_indices = torch.nonzero(mask, as_tuple=False)
-            #CONSOLE.print(f"true_indices: {true_indices}")
-            #CONSOLE.print(f"true_indices.shape: {true_indices.shape}")
 
             selected_index_05 = torch.index_select(index_05, dim=0, index=true_indices.squeeze(1))
-            #CONSOLE.print(f"selected_index_05.shape: {selected_index_05.shape}")
             # Extract and reshape steps using true_indices
             selected_rays = torch.index_select(steps, dim=0, index=true_indices.squeeze(1))
-            #CONSOLE.print(f"selected_rays.shape: {selected_rays.shape}")
             depth = torch.gather(selected_rays[..., 0], dim=-1, index=selected_index_05)
-            #CONSOLE.print(f"first depth: {depth}")
-            #CONSOLE.print(f"first depth.shape: {depth.shape}")
-
-            #raise ValueError("test")
 
             return depth, true_indices
         if self.method == "expected":

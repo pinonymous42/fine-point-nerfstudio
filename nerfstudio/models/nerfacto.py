@@ -312,9 +312,9 @@ class NerfactoModel(Model):
 
         rgb = self.renderer_rgb(rgb=field_outputs[FieldHeadNames.RGB], weights=weights)
         with torch.no_grad():
-            #CONSOLE.print("call renderer_depth")
+            CONSOLE.print("call renderer_depth")
             depth, true_indices = self.renderer_depth(weights=weights, ray_samples=ray_samples)
-            #CONSOLE.print("finish renderer_depth")
+            CONSOLE.print("finish renderer_depth")
         expected_depth = self.renderer_expected_depth(weights=weights, ray_samples=ray_samples)
         accumulation = self.renderer_accumulation(weights=weights)
 
@@ -322,11 +322,6 @@ class NerfactoModel(Model):
         accumulation = torch.index_select(accumulation, dim=0, index=true_indices.squeeze(1))
         expected_depth = torch.index_select(expected_depth, dim=0, index=true_indices.squeeze(1))
 
-        #CONSOLE.print(f"rgb.shape: {rgb.shape}")
-        #CONSOLE.print(f"accumulation.shape: {accumulation.shape}")
-        #CONSOLE.print(f"depth.shape: {depth.shape}")
-        #CONSOLE.print(f"expected_depth.shape: {expected_depth.shape}")
-        #raise ValueError("debug")
         outputs = {
             "rgb": rgb,
             "accumulation": accumulation,
@@ -334,6 +329,8 @@ class NerfactoModel(Model):
             "expected_depth": expected_depth,
             "true_indices": true_indices
         }
+
+        #CONSOLE.print(f"outputs rgb shape: {outputs['rgb'].shape}")
 
         if self.config.predict_normals:
             normals = self.renderer_normals(normals=field_outputs[FieldHeadNames.NORMALS], weights=weights)
@@ -361,11 +358,14 @@ class NerfactoModel(Model):
         return outputs
 
     def get_metrics_dict(self, outputs, batch):
+        #CONSOLE.print(f"model outputs: {outputs}")
         metrics_dict = {}
         gt_rgb = batch["image"].to(self.device)  # RGB or RGBA image
         gt_rgb = self.renderer_rgb.blend_background(gt_rgb)  # Blend if RGBA
         predicted_rgb = outputs["rgb"]
+        #CONSOLE.print(f"predicted: {predicted_rgb.shape}, gt: {gt_rgb.shape}")
         metrics_dict["psnr"] = self.psnr(predicted_rgb, gt_rgb)
+        #CONSOLE.print(f"here")
 
         if self.training:
             metrics_dict["distortion"] = distortion_loss(outputs["weights_list"], outputs["ray_samples_list"])
