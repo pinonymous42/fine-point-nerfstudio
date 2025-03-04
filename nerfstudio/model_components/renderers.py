@@ -349,7 +349,7 @@ class DepthRenderer(nn.Module):
             num_rays: Number of rays, used when samples are packed.
 
         Returns:
-            Outputs of depth values.
+            Outputs of the depth values.
         """
         if self.method == "median":
             #CONSOLE.print("median")
